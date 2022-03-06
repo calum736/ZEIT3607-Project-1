@@ -46,6 +46,9 @@ staff_data <- read.csv(file = 'data/1_Staff.csv')
 student_IDs <- read.csv(file = 'data/Group_3_StudentIDs.csv')
 staff_IDs <- read.csv(file = 'data/Group_3_StaffIDs.csv')
 
+# Blank df to tally a cumulative count of arrivals and departures
+ts_count <- read.csv(file = 'data/ts_count_template.csv')
+
 #---- GET COUNTS ----
 ADFA_STUDENT_CNT <- n_distinct(student_data$ID)
 ADFA_STAFF_CNT <- n_distinct(staff_data$ID)
@@ -71,6 +74,33 @@ student_sample %>%
 
 #TODO
 #Flow in versus flow out - plot cumulative curve to find periods when most busy.
+
+arrivals <- student_sample %>% 
+            group_by(Day, Entrance) %>% 
+            summarise(n = n())
+
+departures <- student_sample %>% 
+              group_by(Day, Exit) %>% 
+              summarise(n = n())
+
+# Expensive op but does the job
+for(i  in 1:nrow(student_sample)) {
+  # Look up and increment entrance time
+  lookup <- paste(student_sample$Day[i], student_sample$Entrance[i], sep="_")
+  r <- which(ts_count$ï..ID == lookup)
+  if(length(r) > 0){
+    ts_count$Entrance[r] = ts_count$Entrance[r] + 1
+    print("+1")
+  }
+  lookup <- paste(student_sample$Day[i], student_sample$Exit[i], sep="_")
+  r <- which(ts_count$ï..ID == lookup)
+  if(length(r) > 0){
+    ts_count$Exit[r] = ts_count$Exit[r] + 1
+    print("-1")
+  }
+}
+
+
 a <- student_sample %>% 
         group_by(Day, Entrance) %>% 
         summarise(n1 = n()) %>% 
@@ -79,7 +109,7 @@ b <- student_sample %>%
         group_by(Day, Exit) %>% 
         summarise(n2 = n()) %>% 
         unite(day_time, Day:Exit, remove = FALSE)
-c <- merge(a, b, by="day_time")
+c <- full_join(a, b, by="day_time")
 
 
 #Analyse the adfa data, establish rates
