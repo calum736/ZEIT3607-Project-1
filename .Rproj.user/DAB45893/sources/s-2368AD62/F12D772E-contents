@@ -66,7 +66,22 @@ student_sample %>%
   geom_bar(aes(Entrance, fill = Day)) +
   facet_wrap("Day")
 
+#AIM 
+#Need to predict trip data based on adfa campus data and above parameters
+
 #TODO
-#Analyse the data pull out rates for each characteristic
-#Use analysed rates and apply to new population to get estimates
+#Flow in versus flow out - plot cumulative curve to find periods when most busy.
+a <- student_sample %>% 
+        group_by(Day, Entrance) %>% 
+        summarise(n1 = n()) %>% 
+        unite(day_time, Day:Entrance, remove = FALSE)
+b <- student_sample %>%
+        group_by(Day, Exit) %>% 
+        summarise(n2 = n()) %>% 
+        unite(day_time, Day:Exit, remove = FALSE)
+c <- merge(a, b, by="day_time")
+
+
+#Analyse the adfa data, establish rates
+#Apply rates and parameters to new campus population
 
