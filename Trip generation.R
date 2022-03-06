@@ -63,11 +63,11 @@ write.csv(staff_sample, "Group_3_Staff_Data.csv")
 
 # Plot sample - example from week 1 tut
 # TODO find out if ggplot has a Sankey chart to illustrate traffic flow
-student_sample %>%
-  #filter(Day == "Wednesday") %>%
-  ggplot() +
-  geom_bar(aes(Entrance, fill = Day)) +
-  facet_wrap("Day")
+#student_sample %>%
+  ##filter(Day == "Wednesday") %>%
+  #ggplot() +
+  #geom_bar(aes(Entrance, fill = Day)) +
+  #facet_wrap("Day")
 
 #AIM 
 #Need to predict trip data based on adfa campus data and above parameters
@@ -84,22 +84,43 @@ departures <- student_sample %>%
               summarise(n = n())
 
 # Expensive op but does the job
-for(i  in 1:nrow(student_sample)) {
-  # Look up and increment entrance time
-  lookup <- paste(student_sample$Day[i], student_sample$Entrance[i], sep="_")
-  r <- which(ts_count$ï..ID == lookup)
-  if(length(r) > 0){
-    ts_count$Entrance[r] = ts_count$Entrance[r] + 1
-    print("+1")
+count_entry_exit <- function(ts_count, sample_df) {
+  for(i in 1:nrow(sample_df)) {
+    # Look up and increment entrance time
+    lookup <- paste(sample_df$Day[i], sample_df$Entrance[i], sep="_")
+    r <- which(ts_count$ï..ID == lookup)
+    if(length(r) > 0){
+      ts_count$Entrance[r] = ts_count$Entrance[r] + 1
+      #print("+1")
+    }
+    lookup <- paste(sample_df$Day[i], sample_df$Exit[i], sep="_")
+    r <- which(ts_count$ï..ID == lookup)
+    if(length(r) > 0){
+      ts_count$Exit[r] = ts_count$Exit[r] + 1
+      #print("-1")
+    }
   }
-  lookup <- paste(student_sample$Day[i], student_sample$Exit[i], sep="_")
-  r <- which(ts_count$ï..ID == lookup)
-  if(length(r) > 0){
-    ts_count$Exit[r] = ts_count$Exit[r] + 1
-    print("-1")
+  return(ts_count)
+}
+  
+ts_count <- count_entry_exit(ts_count, student_sample)
+ts_count <- count_entry_exit(ts_count, staff_sample)
+
+for(i in 1:nrow(ts_count)) {
+  if(i == 1){
+    ts_count$Count[i] = ts_count$Entrance[i] - ts_count$Exit[i]
+  } else {
+    ts_count$Count[i] = ts_count$Count[i-1] + ts_count$Entrance[i] - ts_count$Exit[i]
   }
 }
 
+write.csv(ts_count, "ts_count_output.csv")
+
+ts_count %>%
+  #filter(Day == "Sunday") %>%
+  ggplot() +
+  geom_line(aes(x=ï..ID,y=Count, group=1)) 
+  #facet_wrap("Day")
 
 a <- student_sample %>% 
         group_by(Day, Entrance) %>% 
