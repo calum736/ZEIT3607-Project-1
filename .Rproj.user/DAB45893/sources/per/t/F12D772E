@@ -3,7 +3,7 @@
     "path": "~/ZEIT3607/Project 1/Trip generation.R",
     "project_path": "Trip generation.R",
     "type": "r_source",
-    "hash": "0",
+    "hash": "3230583485",
     "contents": "",
     "dirty": false,
     "created": 1646477152224.0,
@@ -12,15 +12,15 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "123,0",
-        "scrollLine": "116"
+        "cursorPosition": "147,0",
+        "scrollLine": "137"
     },
     "folds": "",
-    "lastKnownWriteTime": 1646551615,
+    "lastKnownWriteTime": 1646571469,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1646551615570,
+    "last_content_update": 1646571469457,
     "read_only": false,
     "read_only_alternatives": []
 }
