@@ -109,6 +109,7 @@ trips_by_zone <- trips_by_zone %>%
                 mutate(Freq = Weekly.Trips.to.ADFA.Campus/sum(Weekly.Trips.to.ADFA.Campus))
 
 
+
     
 #Next part calculates number of people on campus at any given time from sample data
 # Expensive op but does the job
