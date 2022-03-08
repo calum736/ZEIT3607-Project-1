@@ -3,24 +3,24 @@
     "path": "~/ZEIT3607/Project 1/Data Analysis.R",
     "project_path": "Data Analysis.R",
     "type": "r_source",
-    "hash": "0",
+    "hash": "3211595046",
     "contents": "",
-    "dirty": true,
+    "dirty": false,
     "created": 1646638389080.0,
     "source_on_save": false,
     "relative_order": 1,
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "70,39",
-        "scrollLine": "43"
+        "cursorPosition": "125,0",
+        "scrollLine": "115"
     },
     "folds": "",
-    "lastKnownWriteTime": 1646645782,
+    "lastKnownWriteTime": 1646740006,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1646657328421,
+    "last_content_update": 1646740007006,
     "read_only": false,
     "read_only_alternatives": []
 }

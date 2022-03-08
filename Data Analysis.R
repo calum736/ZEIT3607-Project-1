@@ -22,6 +22,12 @@ CAREER_BREAKDOWN <- c(
   "UGRD"=0.40
 )
 
+GENDER <- c(
+  "M"=0.50,
+  "F"=0.50
+)
+
+
 # Job title expected composition as per brief
 # Unsure, better to use this or use proportion of people by faculty???
 JOB_BREAKDOWN <- c(
@@ -46,8 +52,6 @@ FACULTY_BREAKDOWN <- c(
 # Staff hrs schedule see page 51 of EA (too much detail, ignore for now)
 # https://www.hr.unsw.edu.au/services/indrel/The%20University%20of%20New%20South%20Wales%20(Professional%20Staff)%20Enterprise%20Agreement%202018.pdf
 
-PG_STUDENT <- 0.60
-UG_STUDENT <- 0.40
 
 N_STUDENTS <- 5000
 N_STAFF <- 700
@@ -107,6 +111,40 @@ job_breakdown <- staff_sample %>%
 #Proportion of trips by zone
 trips_by_zone <- trips_by_zone %>%
                 mutate(Freq = Weekly.Trips.to.ADFA.Campus/sum(Weekly.Trips.to.ADFA.Campus))
+
+
+#Average trips per week per student by school and career
+#??? No post grad sci students in our sample
+test <- student_sample %>% 
+        group_by(ID, School, Career) %>% 
+        summarise(n = n()) %>% 
+        #mutate(Freq = n/sum(n)) %>% 
+        group_by(School, Career) %>% 
+        summarise(Mean = mean(n)) %>% 
+        mutate(ID = paste(School, Career, sep="_"), .before=School)
+
+
+        
+cross_prod_list <- function (A, B) {
+  x_list <- vector(mode="list", len=0)
+  for(i in 1:length(A)){
+    for(j in 1:length(B)){
+      key <- paste(names(A)[[i]], names(B)[[j]], sep="_")
+      value <- A[[i]] * B[[j]]
+      print(key)
+      print(value)
+      x_list[[key]] = value
+    }
+  }
+  return(x_list)
+}
+
+SYNTH_STUDENT <- enframe(unlist(cross_prod_list(FACULTY_BREAKDOWN, CAREER_BREAKDOWN)), 
+                         name="ID", 
+                         value="Freq") %>% 
+  mutate(n = Freq * N_STUDENTS)
+                                     
+
 
 
     
