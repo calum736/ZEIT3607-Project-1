@@ -27,7 +27,6 @@ GENDER <- c(
   "F"=0.50
 )
 
-
 # Job title expected composition as per brief
 # Unsure, better to use this or use proportion of people by faculty???
 JOB_BREAKDOWN <- c(
@@ -42,6 +41,12 @@ JOB_BREAKDOWN <- c(
   "technical_support"=0.10
 )
 
+CONTRACT_HRS <- c(
+  "Full-Time"=0.80,
+  "Part-Time"=0.20
+)
+
+#Double check this one - brief was not clear 
 FACULTY_BREAKDOWN <- c(
   "SEIT"=0.40,
   "HASS"=0.20,
@@ -62,7 +67,7 @@ TRIP_DURATION_GROWTH <- 0.15 # travel times expected to increase 15% in target y
 
 #---- GET COUNTS ----
 n_students <- n_distinct(student_data$ID)
-n_students <- n_distinct(staff_data$ID)
+n_staff <- n_distinct(staff_data$ID)
 
 #---- EXTRACT GROUP 3 RECORDS ----
 student_sample <- filter(student_data, student_data$ID %in% student_IDs$ID)
@@ -107,26 +112,12 @@ job_breakdown <- staff_sample %>%
                 summarise(n = n()) %>% 
                 mutate(Freq = n/sum(n))
 
-
 #Proportion of trips by zone
 trips_by_zone <- trips_by_zone %>%
                 mutate(Freq = Weekly.Trips.to.ADFA.Campus/sum(Weekly.Trips.to.ADFA.Campus))
 
-
-#Average trips per week per student by school and career
-#??? No post grad sci students in our sample
-test <- student_sample %>% 
-        group_by(ID, School, Career) %>% 
-        summarise(n = n()) %>% 
-        #mutate(Freq = n/sum(n)) %>% 
-        group_by(School, Career) %>% 
-        summarise(Mean = mean(n)) %>% 
-        mutate(ID = paste(School, Career, sep="_"), .before=School)
-
-
-        
 cross_prod_list <- function (A, B) {
-  x_list <- vector(mode="list", len=0)
+  x_list <- vector(mode="numeric", len=0) #should mode be "list"? 
   for(i in 1:length(A)){
     for(j in 1:length(B)){
       key <- paste(names(A)[[i]], names(B)[[j]], sep="_")
@@ -139,11 +130,46 @@ cross_prod_list <- function (A, B) {
   return(x_list)
 }
 
-SYNTH_STUDENT <- enframe(unlist(cross_prod_list(FACULTY_BREAKDOWN, CAREER_BREAKDOWN)), 
+#Average trips to campus per week per student by school and career (counts number of records)
+#??? No post grad sci students in our sample
+av_trips_student <- student_sample %>% 
+  group_by(ID, School, Career) %>% 
+  summarise(n = n()) %>% 
+  #mutate(Freq = n/sum(n)) %>% 
+  group_by(School, Career) %>% 
+  summarise("Mean" = mean(n)) %>% 
+  mutate(ID = paste(School, Career, sep="_"), .before=School)
+
+SYNTH_STUDENT <- enframe((cross_prod_list(FACULTY_BREAKDOWN, CAREER_BREAKDOWN)), 
                          name="ID", 
                          value="Freq") %>% 
-  mutate(n = Freq * N_STUDENTS)
-                                     
+  mutate(n = Freq * N_STUDENTS) %>% 
+  full_join(av_trips_student, by ="ID") %>% 
+  mutate("n trips" = n * Mean) %>%  # this gives the number trips to campus per week (not per day)
+  bind_rows(summarise(.,
+                      across(where(is.numeric), sum),
+                      across(where(is.character), ~"TOTAL")))
+
+av_trips_staff <- staff_sample %>% 
+  group_by(ID, School, FulltimeParttime) %>% # job titles don't match ones given in brief, replace with level
+  summarise(n = n()) %>% 
+  #mutate(Freq = n/sum(n)) %>% 
+  group_by(School, FulltimeParttime) %>% 
+  summarise("Mean" = mean(n)) %>% 
+  mutate(ID = paste(School, FulltimeParttime, sep="_"), .before=School)
+
+SYNTH_STAFF <- enframe((cross_prod_list(FACULTY_BREAKDOWN, CONTRACT_HRS)), 
+                         name="ID", 
+                         value="Freq") %>% 
+  mutate(n = Freq * N_STAFF) %>% 
+  full_join(av_trips_staff, by ="ID") %>% 
+  mutate("n trips" = n * Mean) %>%  # this gives the number trips to campus per week (not per day)
+  bind_rows(summarise(.,
+                      across(where(is.numeric), sum),
+                      across(where(is.character), ~"TOTAL")))
+
+
+
 
 
 
