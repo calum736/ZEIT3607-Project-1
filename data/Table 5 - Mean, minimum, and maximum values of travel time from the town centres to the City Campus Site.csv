@@ -1,0 +1,17 @@
+Zone,Mode,Minimum,Maximum,Mean
+Belconnen,Auto,12,22,17
+Gungahlin,Auto,23,35,31
+Inner North,Auto,8,14,12
+Inner South,Auto,9,14,12
+Woden,Auto,10,18,15
+Western Creek,Auto,15,28,23
+Tuggeranong,Auto,19,35,29
+Queanbeyan,Auto,16,30,25
+Belconnen,PT,31,38,33
+Gungahlin,PT,51,71,62
+Inner North,PT,23,34,29
+Inner South,PT,19,33,27
+Woden,PT,36,56,49
+Western Creek,PT,32,47,42
+Tuggeranong,PT,48,72,64
+Queanbeyan,PT,34,49,44

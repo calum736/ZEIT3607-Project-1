@@ -16,6 +16,9 @@ ts_count <- read.csv(file = "data/ts_count_template.csv")
 
 trips_by_zone <- read.csv(file = "data/Table 2 - Number of trips from the town centres to the ADFA Campus in 2020.csv")
 zone_population <- read.csv(file = "data/Table 3 - Population of the town centres, in the past, and its projection from the future.csv")
+zone_distance_city <- read.csv(file = "data/Table 4 - Average distance from the town centres to ADFA Campus and City Campus.csv")
+zone_travel_time_city <- read.csv(file = "data/Table 5 - Mean, minimum, and maximum values of travel time from the town centres to the City Campus Site.csv")
+
 
 #---- MODEL PARAMETERS ----
 CAREER_BREAKDOWN <- c(
@@ -66,6 +69,10 @@ BASE_YEAR <- 2020
 TARGET_YEAR <- 2040
 TRIP_DURATION_GROWTH <- 0.15 # travel times expected to increase 15% in target year
 
+####################
+# 0. DATA ANALYSIS #
+####################
+
 #---- GET COUNTS ----
 n_students <- n_distinct(student_data$ID)
 n_staff <- n_distinct(staff_data$ID)
@@ -75,8 +82,8 @@ student_sample <- filter(student_data, student_data$ID %in% student_IDs$ID)
 staff_sample <- filter(staff_data, staff_data$ID %in% staff_IDs$ID)
 
 # Write sample set to CSV for future reference
-write.csv(student_sample, "Group_3_Student_Data.csv")
-write.csv(staff_sample, "Group_3_Staff_Data.csv")
+write.csv(student_sample, "output data/Group_3_Student_Data.csv")
+write.csv(staff_sample, "output data/Group_3_Staff_Data.csv")
 
 # What can we learn about our sample???
 
@@ -126,6 +133,10 @@ cross_prod_list <- function(A, B) {
   return(x_list)
 }
 
+######################
+# 1. TRIP GENERATION #
+######################
+
 # Average trips to campus per week per student by school and career (counts number of records)
 # ??? No post grad sci students in our sample
 av_trips_student <- student_sample %>%
@@ -143,11 +154,6 @@ SYNTH_STUDENT <- enframe((cross_prod_list(FACULTY_BREAKDOWN, CAREER_BREAKDOWN)),
   mutate(n = Freq * N_STUDENTS) %>%
   full_join(av_trips_student, by = "ID") %>%
    mutate("n trips" = n * Mean) # %>% # this gives the number trips to campus per week (not per day)
-  # bind_rows(summarise(
-  #   .,
-  #   across(where(is.numeric), sum),
-  #   across(where(is.character), ~"TOTAL")
-  # ))
 
 av_trips_staff <- staff_sample %>%
   group_by(ID, School, FulltimeParttime) %>% # job titles don't match ones given in brief, replace with level
@@ -164,28 +170,32 @@ SYNTH_STAFF <- enframe((cross_prod_list(FACULTY_BREAKDOWN, CONTRACT_HRS)),
   mutate(n = Freq * N_STAFF) %>%
   full_join(av_trips_staff, by = "ID") %>%
    mutate("n trips" = n * Mean) # %>% # this gives the number trips to campus per week (not per day)
-  # bind_rows(summarise(
-  #   .,
-  #   across(where(is.numeric), sum),
-  #   across(where(is.character), ~"TOTAL")
-  # ))
 
 TOTAL_TRIPS = sum(SYNTH_STUDENT$`n trips`, na.rm=TRUE) + sum(SYNTH_STAFF$`n trips`, na.rm=TRUE) #remove NAs
 
-#zone_growth <- zone_population %>% 
+########################
+# 2. TRIP DISTRIBUTION #
+########################
+
+# Factor in growth for each zone and the proportion of weekly trips to predict number of trips
+# Probably incorrect method to predict since have used table 2 from brief
+TRIPS_BY_ZONE <- zone_population %>% 
+  full_join(trips_by_zone, by="Zone") %>% 
+  mutate('2016_trips' = TOTAL_TRIPS * X2016 / X2020 * (Weekly.Trips.to.ADFA.Campus / sum(Weekly.Trips.to.ADFA.Campus))) %>% 
+  mutate('2020_trips' = TOTAL_TRIPS * X2020 / X2020 * (Weekly.Trips.to.ADFA.Campus / sum(Weekly.Trips.to.ADFA.Campus))) %>% 
+  mutate('2040_trips' = TOTAL_TRIPS * X2040 / X2020 * (Weekly.Trips.to.ADFA.Campus / sum(Weekly.Trips.to.ADFA.Campus))) %>% 
+  select (-c(Weekly.Trips.to.ADFA.Campus, X2016, X2020, X2040)) 
+write.csv(TRIPS_BY_ZONE, "output data/TRIPS_BY_ZONE.csv")
+
+##################
+# 3. MODE CHOICE #
+##################
   
+# Require Tables 4, 5 data
 
-# Proportion of trips by zone
-TRIPS_BY_ZONE <- trips_by_zone %>%
-  mutate(Freq = Weekly.Trips.to.ADFA.Campus / sum(Weekly.Trips.to.ADFA.Campus)) %>% 
-  mutate(`n trips` = Freq * TOTAL_TRIPS) %>% 
-  select (-c(Weekly.Trips.to.ADFA.Campus)) #drop column
-  
-
-
-
-
-
+MODE_CHOICE <- full_join(zone_travel_time_city, zone_distance_city, by="Zone") %>% 
+  mutate(Reliability = (Maximum - Minimum)/Mean) %>% 
+  mutate(U = ifelse(Mode == "Auto", "u_auto", "no u")) # find a way to factor cost from brief 
 
 
 
@@ -223,7 +233,7 @@ for (i in 1:nrow(ts_count)) {
   }
 }
 
-write.csv(ts_count, "ts_count_output.csv")
+write.csv(ts_count, "output data/ts_count_output.csv")
 
 ts_count %>%
   # filter(Day == "Sunday") %>%
