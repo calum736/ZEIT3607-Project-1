@@ -7,11 +7,27 @@ Woden,Auto,10,18,15
 Western Creek,Auto,15,28,23
 Tuggeranong,Auto,19,35,29
 Queanbeyan,Auto,16,30,25
-Belconnen,PT,31,38,33
-Gungahlin,PT,51,71,62
-Inner North,PT,23,34,29
-Inner South,PT,19,33,27
-Woden,PT,36,56,49
-Western Creek,PT,32,47,42
-Tuggeranong,PT,48,72,64
-Queanbeyan,PT,34,49,44
+Belconnen,PT_Student,31,38,33
+Gungahlin,PT_Student,51,71,62
+Inner North,PT_Student,23,34,29
+Inner South,PT_Student,19,33,27
+Woden,PT_Student,36,56,49
+Western Creek,PT_Student,32,47,42
+Tuggeranong,PT_Student,48,72,64
+Queanbeyan,PT_Student,34,49,44
+Belconnen,PT_Staff,31,38,33
+Gungahlin,PT_Staff,51,71,62
+Inner North,PT_Staff,23,34,29
+Inner South,PT_Staff,19,33,27
+Woden,PT_Staff,36,56,49
+Western Creek,PT_Staff,32,47,42
+Tuggeranong,PT_Staff,48,72,64
+Queanbeyan,PT_Staff,34,49,44
+Belconnen,Active,,,
+Gungahlin,Active,,,
+Inner North,Active,,,
+Inner South,Active,,,
+Woden,Active,,,
+Western Creek,Active,,,
+Tuggeranong,Active,,,
+Queanbeyan,Active,,,

@@ -62,12 +62,17 @@ FACULTY_BREAKDOWN <- c(
 # https://www.hr.unsw.edu.au/services/indrel/The%20University%20of%20New%20South%20Wales%20(Professional%20Staff)%20Enterprise%20Agreement%202018.pdf
 
 
-N_STUDENTS <- 5000
+N_STUDENT <- 5000
 N_STAFF <- 700
 
 BASE_YEAR <- 2020
 TARGET_YEAR <- 2040
+
 TRIP_DURATION_GROWTH <- 0.15 # travel times expected to increase 15% in target year
+
+PT_STAFF_COST = 3.22
+PT_STUDENT_COST = 1.66
+AUTO_KM_COST = 0.35
 
 ####################
 # 0. DATA ANALYSIS #
@@ -151,7 +156,7 @@ SYNTH_STUDENT <- enframe((cross_prod_list(FACULTY_BREAKDOWN, CAREER_BREAKDOWN)),
   name = "ID",
   value = "Freq"
 ) %>%
-  mutate(n = Freq * N_STUDENTS) %>%
+  mutate(n = Freq * N_STUDENT) %>%
   full_join(av_trips_student, by = "ID") %>%
    mutate("n trips" = n * Mean) # %>% # this gives the number trips to campus per week (not per day)
 write.csv(SYNTH_STUDENT, "output data/SYNTH_STUDENT_TRIPS.csv")
@@ -195,11 +200,18 @@ write.csv(TRIPS_BY_ZONE, "output data/TRIPS_BY_ZONE.csv")
   
 # Require Tables 4, 5 data
 
+# Difference between the two is the public transport fare is different for students/staff
 MODE_CHOICE <- full_join(zone_travel_time_city, zone_distance_city, by="Zone") %>% 
   mutate(Reliability = (Maximum - Minimum)/Mean) %>% 
-  mutate(U = ifelse(Mode == "Auto", "u_auto", "no u")) # find a way to factor cost from brief 
-
-
+  mutate(U = ifelse(Mode == "Auto", 
+                    -0.25 * Mean - 0.11 * AUTO_KM_COST,
+                    ifelse(Mode == "PT_Student",
+                           -0.26 - 0.15 * Mean - 0.13 * PT_STUDENT_COST - 0.01 * Reliability,
+                           ifelse(Mode == "PT_Staff",
+                                  -0.26 - 0.15 * Mean - 0.13 * PT_STAFF_COST - 0.01 * Reliability,
+                                  ifelse(Mode == "Active",
+                                         0.1 - 0.67 * Distance.to.City.Campus..km.,
+                                         NA))))) 
 
 ###############################
 # EXTRA SUFF - IGNORE FOR NOW #
