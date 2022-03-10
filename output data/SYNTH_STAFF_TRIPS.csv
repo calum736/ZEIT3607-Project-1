@@ -1,0 +1,9 @@
+"","ID","Freq","n","School","FulltimeParttime","Mean","n trips"
+"1","SEIT_Full-Time",0.32,224,"SEIT","Full-Time",4.23478260869565,948.591304347826
+"2","SEIT_Part-Time",0.08,56,"SEIT","Part-Time",4.57142857142857,256
+"3","HASS_Full-Time",0.16,112,"HASS","Full-Time",3.29545454545455,369.090909090909
+"4","HASS_Part-Time",0.04,28,"HASS","Part-Time",1,28
+"5","BUS_Full-Time",0.16,112,"BUS","Full-Time",3.98275862068966,446.068965517242
+"6","BUS_Part-Time",0.04,28,"BUS","Part-Time",3.75,105
+"7","SCI_Full-Time",0.16,112,"SCI","Full-Time",3.42,383.04
+"8","SCI_Part-Time",0.04,28,"SCI","Part-Time",2.6,72.8

@@ -154,6 +154,7 @@ SYNTH_STUDENT <- enframe((cross_prod_list(FACULTY_BREAKDOWN, CAREER_BREAKDOWN)),
   mutate(n = Freq * N_STUDENTS) %>%
   full_join(av_trips_student, by = "ID") %>%
    mutate("n trips" = n * Mean) # %>% # this gives the number trips to campus per week (not per day)
+write.csv(SYNTH_STUDENT, "output data/SYNTH_STUDENT_TRIPS.csv")
 
 av_trips_staff <- staff_sample %>%
   group_by(ID, School, FulltimeParttime) %>% # job titles don't match ones given in brief, replace with level
@@ -170,6 +171,7 @@ SYNTH_STAFF <- enframe((cross_prod_list(FACULTY_BREAKDOWN, CONTRACT_HRS)),
   mutate(n = Freq * N_STAFF) %>%
   full_join(av_trips_staff, by = "ID") %>%
    mutate("n trips" = n * Mean) # %>% # this gives the number trips to campus per week (not per day)
+write.csv(SYNTH_STAFF, "output data/SYNTH_STAFF_TRIPS.csv")
 
 TOTAL_TRIPS = sum(SYNTH_STUDENT$`n trips`, na.rm=TRUE) + sum(SYNTH_STAFF$`n trips`, na.rm=TRUE) #remove NAs
 
