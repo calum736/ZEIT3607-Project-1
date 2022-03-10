@@ -200,7 +200,7 @@ write.csv(TRIPS_BY_ZONE, "output data/TRIPS_BY_ZONE.csv")
   
 # Require Tables 4, 5 data
 
-# Difference between the two is the public transport fare is different for students/staff
+# Some info about what U indicates - https://brilliant.org/wiki/utility-functions/
 MODE_CHOICE <- full_join(zone_travel_time_city, zone_distance_city, by="Zone") %>% 
   mutate(Reliability = (Maximum - Minimum)/Mean) %>% 
   mutate(U = ifelse(Mode == "Auto", 
@@ -212,6 +212,7 @@ MODE_CHOICE <- full_join(zone_travel_time_city, zone_distance_city, by="Zone") %
                                   ifelse(Mode == "Active",
                                          0.1 - 0.67 * Distance.to.City.Campus..km.,
                                          NA))))) 
+write.csv(MODE_CHOICE, "output data/MODE_CHOICE.csv")
 
 ###############################
 # EXTRA SUFF - IGNORE FOR NOW #
