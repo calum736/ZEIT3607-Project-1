@@ -199,6 +199,10 @@ MODE_CHOICE <- full_join(zone_travel_time_city, zone_distance_city, by="Zone") %
 
 
 
+###############################
+# EXTRA SUFF - IGNORE FOR NOW #
+###############################
+
 # Next part calculates number of people on campus at any given time from sample data
 # Expensive op but does the job
 count_entry_exit <- function(ts_count, sample_df) {
