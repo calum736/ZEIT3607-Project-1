@@ -73,6 +73,7 @@ TRIP_DURATION_GROWTH <- 0.15 # travel times expected to increase 15% in target y
 PT_STAFF_COST = 3.22
 PT_STUDENT_COST = 1.66
 AUTO_KM_COST = 0.35
+AUTO_PARKING_COST = 5 
 
 ####################
 # 0. DATA ANALYSIS #
@@ -197,9 +198,9 @@ write.csv(TRIPS_BY_ZONE, "output data/TRIPS_BY_ZONE.csv")
 ##################
 # 3. MODE CHOICE #
 ##################
-  
-# Require Tables 4, 5 data
 
+# Require data from Tables 4, 5 
+# This doesn't take into account the 15 percent increase in travel duration by 2040
 # Some info about what U indicates - https://brilliant.org/wiki/utility-functions/
 MODE_CHOICE <- full_join(zone_travel_time_city, zone_distance_city, by="Zone") %>% 
   mutate(Reliability = (Maximum - Minimum)/Mean) %>% 
