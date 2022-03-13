@@ -1,0 +1,21 @@
+library(ggplot2)
+library(broom)
+
+trees %>%
+  ggplot(aes(Height, Girth)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+
+# run the linear regression
+# lm(dependent_var ~ independent_var, data = dataset)
+fit <- lm(Girth ~ Height, data = trees)
+
+par(mfrow = c(2, 2))
+plot(fit)
+
+ggplot(fit, aes(fit$residuals)) +
+  geom_histogram(bins = 10)
+
+summary(fit)
+
+tidy(fit)

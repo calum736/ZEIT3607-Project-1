@@ -1,26 +1,26 @@
 {
-    "id": "327A1C6B",
+    "id": "9E9B4C58",
     "path": "~/ZEIT3607/Project 1/Data Analysis.R",
     "project_path": "Data Analysis.R",
     "type": "r_source",
     "hash": "0",
     "contents": "",
-    "dirty": false,
-    "created": 1646638389080.0,
+    "dirty": true,
+    "created": 1647000914169.0,
     "source_on_save": false,
-    "relative_order": 2,
+    "relative_order": 6,
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "205,53",
-        "scrollLine": "195"
+        "cursorPosition": "214,0",
+        "scrollLine": "190"
     },
     "folds": "",
-    "lastKnownWriteTime": 1646906691,
+    "lastKnownWriteTime": 1647049272,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1646906691724,
+    "last_content_update": 1647049321195,
     "read_only": false,
     "read_only_alternatives": []
 }

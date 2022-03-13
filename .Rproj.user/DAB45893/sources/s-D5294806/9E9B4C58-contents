@@ -117,6 +117,7 @@ faculty_breakdown <- bind_rows(
   summarise(n = n()) %>%
   mutate(Freq = n / sum(n))
 
+
 # Proportion of staff by job title
 job_breakdown <- staff_sample %>%
   group_by(ID, JobTitle) %>%
@@ -138,6 +139,99 @@ cross_prod_list <- function(A, B) {
   }
   return(x_list)
 }
+
+
+
+temp <- student_sample %>%
+  group_by(ID, Career) %>%
+  summarise(n = n()) %>%
+  # mutate(Freq = n/sum(n)) %>%
+  group_by(Career) %>%
+  summarise("Weekly mean (trips)" = mean(n)) 
+  #mutate(ID = paste(School, Career, sep = "_"), .before = School)
+
+ggplot(data=temp, aes(x=Career, y=`Weekly mean (trips)`, fill=Career)) +
+  geom_bar(stat="identity") + 
+  geom_text(aes(label=round(`Weekly mean (trips)`, digits=2)), vjust=1.6, color="white",
+            position = position_dodge(0.9), size=3.5)+
+  ggtitle("Student weekly mean (trips) by career - ADFA sample")
+
+temp1 <- student_sample %>%
+  group_by(ID, School) %>%
+  summarise(n = n()) %>%
+  # mutate(Freq = n/sum(n)) %>%
+  group_by(School) %>%
+  summarise("Weekly mean (trips)" = mean(n)) 
+#mutate(ID = paste(School, Career, sep = "_"), .before = School)
+
+ggplot(data=temp1, aes(x=School, y=`Weekly mean (trips)`, fill=School)) +
+  geom_bar(stat="identity") + 
+  geom_text(aes(label=round(`Weekly mean (trips)`, digits=2)), vjust=1.6, color="white",
+            position = position_dodge(0.9), size=3.5)+
+  ggtitle("Student weekly mean (trips) by school - ADFA sample")
+
+temp2 <- student_sample %>%
+  group_by(ID, Career, School) %>%
+  summarise(n = n()) %>%
+  # mutate(Freq = n/sum(n)) %>%
+  group_by(Career, School) %>%
+  summarise("Weekly mean (trips)" = mean(n)) 
+#mutate(ID = paste(School, Career, sep = "_"), .before = School)
+
+
+ggplot(data=temp2, aes(x=School, y=`Weekly mean (trips)`, fill=Career)) +
+  geom_bar(stat="identity", position="dodge", width=0.5) + 
+  geom_text(aes(label=round(`Weekly mean (trips)`, digits=2)), vjust=1.6, color="white",
+            position = position_dodge(0.5), size=3.5)+
+  ggtitle("Student weekly mean (trips) by school - ADFA sample")
+
+temp3 <- student_sample %>%
+  group_by(ID, AdmitTerm) %>%
+  summarise(n = n()) %>%
+  # mutate(Freq = n/sum(n)) %>%
+  group_by(AdmitTerm) %>%
+  summarise("Weekly mean (trips)" = mean(n)) 
+#mutate(ID = paste(School, Career, sep = "_"), .before = School)
+
+temp3[temp3 == 'Semester 2 2011'] <- '1 Semester 2 2011'
+temp3[temp3 == 'Semester 1 2012'] <- '2 Semester 1 2012'
+temp3[temp3 == 'Semester 2 2012'] <- '3 Semester 2 2012'
+temp3[temp3 == 'Semester 1 2013'] <- '4 Semester 1 2013'
+temp3[temp3 == 'Semester 2 2013'] <- '5 Semester 2 2013'
+temp3[temp3 == 'Semester 1 2014'] <- '5 Semester 1 2014'
+temp3[temp3 == 'Semester 2 2014'] <- '6 Semester 2 2014'
+temp3[temp3 == 'Semester 1 2015'] <- '7 Semester 1 2015'
+temp3[temp3 == 'Semester 2 2015'] <- '8 Semester 2 2015'
+temp3[temp3 == 'Semester 1 2016'] <- '9 Semester 1 2016'
+temp3[temp3 == 'Semester 2 2016'] <- '10 Semester 2 2016'
+temp3[temp3 == 'Semester 1 2017'] <- '11 Semester 1 2017'
+temp3[temp3 == 'Semester 2 2017'] <- '12 Semester 2 2017'
+temp3[temp3 == 'Semester 1 2018'] <- '13 Semester 1 2018'
+temp3[temp3 == 'Semester 2 2018'] <- '14 Semester 2 2018'
+temp3[temp3 == 'Semester 1 Canberra 2019'] <- '15. Semester 1 2019'
+temp3[temp3 == 'Semester 2 Canberra 2019'] <- '16. Semester 2 2019'
+temp3[temp3 == 'Semester 1 Canberra 2020'] <- '17. Semester 1 2020'
+write.csv(temp3, 'temp.csv')
+
+temp3 <- temp3[order(temp3$AdmitTerm),]
+ggplot(data=temp3, aes(x=AdmitTerm, y=`Weekly mean (trips)`, fill=AdmitTerm)) +
+  geom_bar(stat="identity") + 
+  geom_text(aes(label=round(`Weekly mean (trips)`, digits=2)), vjust=1.6, color="white",
+            position = position_dodge(0.9), size=3.5)+
+  ggtitle("Student weekly mean (trips) by admission term - ADFA sample")
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ######################
 # 1. TRIP GENERATION #
@@ -255,10 +349,10 @@ for (i in 1:nrow(ts_count)) {
 
 write.csv(ts_count, "output data/ts_count_output.csv")
 
-ts_count %>%
+#ts_count %>%
   # filter(Day == "Sunday") %>%
-  ggplot() +
-  geom_line(aes(x = ï..ID, y = Count, group = 1))
+#  ggplot() +
+#  geom_line(aes(x = ï..ID, y = Count, group = 1))
 # facet_wrap("Day")
 
 # Which arrival/departure period has greatest number people?

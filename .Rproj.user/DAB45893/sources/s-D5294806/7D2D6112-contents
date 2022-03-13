@@ -1,0 +1,57 @@
+#- Read csv data ----
+student_data <- read.csv(file = "data/1_Students.csv")
+staff_data <- read.csv(file = "data/1_Staff.csv")
+
+student_IDs <- read.csv(file = "data/Group_3_StudentIDs.csv")
+staff_IDs <- read.csv(file = "data/Group_3_StaffIDs.csv")
+
+trips_by_zone <- read.csv(file = "data/Table 2 - Number of trips from the town centres to the ADFA Campus in 2020.csv")
+zone_population <- read.csv(file = "data/Table 3 - Population of the town centres, in the past, and its projection from the future.csv")
+zone_distance_city <- read.csv(file = "data/Table 4 - Average distance from the town centres to ADFA Campus and City Campus.csv")
+zone_travel_time_city <- read.csv(file = "data/Table 5 - Mean, minimum, and maximum values of travel time from the town centres to the City Campus Site.csv")
+
+#- Extract sample data from master ----
+student_sample <- filter(student_data, student_data$ID %in% student_IDs$ID)
+staff_sample <- filter(staff_data, staff_data$ID %in% staff_IDs$ID)
+
+# Write sample data to CSV for future reference
+write.csv(student_sample, "output data/Group_3_Student_Data.csv")
+write.csv(staff_sample, "output data/Group_3_Staff_Data.csv")
+
+#- Trip generation ----
+student_sample_weekly <- 
+  student_sample %>% 
+  group_by(ID) %>% 
+  summarise(WeeklyTrips=n(), School=first(School), Career=first(Career))
+
+student_weekly_model <- lm(WeeklyTrips ~ Career + School, data = student_sample_weekly)
+summary(student_weekly_model)
+
+#- outsample validation ----
+# student_sample_weekly_train <- 
+#   student_sample_weekly %>% 
+#   sample_frac(0.8)
+
+Data_Student_Weekly_Test <- 
+  Data_Student_Weekly %>% 
+  filter(!(ID %in% student_IDs$ID))
+
+Model_Student <- lm(WeeklyTrips~School, data=Data_Student_Weekly_Train)
+summary(Model_Student)
+
+Predicted_trips <- predict(Model_Student, newdata = Data_Student_Weekly_Test)
+
+Data_Student_Weekly_Test <- 
+  Data_Student_Weekly_Test %>% 
+  cbind(Predicted_trips)
+
+
+Data_Student_Weekly_Test %>% 
+  ggplot()+
+  geom_point(aes(x=Predicted_trips, y=WeeklyTrips), position = "jitter")
+
+
+Data_Student_Weekly_Test %>% 
+  mutate(Difference = (Predicted_trips - WeeklyTrips)^2) %>% 
+  group_by() %>% 
+  summarise(RMSE = (sum(Difference)/nrow(Data_Student_Weekly_Test))^0.5)
