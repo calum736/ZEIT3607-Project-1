@@ -1,4 +1,5 @@
 
+
 #---- PACKAGES ----
 library(tidyverse)
 library(janitor)
@@ -113,9 +114,10 @@ city_staff_pop <- city_staff_pop %>%
 write.csv(city_student_pop, "output data/city_student_pop.csv")
 write.csv(city_staff_pop, "output data/city_staff_pop.csv")
 
-city_total_trips = sum(city_student_pop$TotalTrips, na.rm=TRUE) + sum(city_staff_pop$TotalTrips, na.rm=TRUE) #remove NAs
+city_total_trips = sum(city_student_pop$TotalTrips, na.rm = TRUE) + sum(city_staff_pop$TotalTrips, na.rm =
+                                                                          TRUE) #remove NAs
 
-# TODO: need to factor in that the av. weekly trips is counting weekends 
+# TODO: need to factor in that the av. weekly trips is counting weekends
 
 #----------------------------------------------#
 #--- 2. TRIP GENERATION -----------------------#
@@ -160,13 +162,13 @@ print(Data_Zones %>% select(Zone, Trips))
 
 Data_Zones %>%
   ggplot() +
-  geom_col(aes(x = reorder(Zone,-Trips), y = Trips)) +
+  geom_col(aes(x = reorder(Zone, -Trips), y = Trips)) +
   labs(x = "Zone") +
   theme_bw()
 
 Data_Zones %>%
   select(Zone, Trips, Distance_City, Population) %>%
-  mutate(Zone = reorder(Zone,-Trips)) %>%
+  mutate(Zone = reorder(Zone, -Trips)) %>%
   gather(-Zone, key = Measure, value = Value) %>%
   ggplot() +
   geom_col(aes(x = Zone, y = Value)) +
@@ -176,7 +178,7 @@ Data_Zones %>%
 Data_Zones %>%
   ggplot() +
   geom_col(aes(
-    x = reorder(Zone,-Trips),
+    x = reorder(Zone, -Trips),
     y = Trips,
     fill = Population
   )) +
@@ -211,7 +213,7 @@ Data_Zones <-
     U_PT = -0.26 - 0.15 * PT_TT_mean - 0.13 * PT_Cost_Student - 0.01 *
       PT_Reliability,
     U_Active = 0.1 - 0.67 * Distance_City
-  ) 
+  )
 
 #---- Probabilities  ----
 Data_Zones <-  Data_Zones %>%
@@ -224,25 +226,26 @@ Data_Zones <-  Data_Zones %>%
     Prob_Auto = Exp_U_Auto / Exp_Sum,
     Prob_PT = Exp_U_PT / Exp_Sum,
     Prob_Active = Exp_U_Active / Exp_Sum,
-
+    
     Trips_Auto = Trips * Prob_Auto,
     Trips_PT = Trips * Prob_PT,
     Trips_Active = Trips * Prob_Active
   )
 
+#---- Visualisation  ----
 Data_Zones %>%
   select(Zone, contains("Prob")) %>%
-  mutate(Zone = reorder(Zone,-Prob_Auto)) %>%
+  mutate(Zone = reorder(Zone, -Prob_Auto)) %>%
   gather(-Zone, key = Mode, value = Probability) %>%
   mutate(Mode = ordered(Mode, levels = c("Prob_Active", "Prob_PT", "Prob_Auto"))) %>%
   ggplot() +
   geom_col(aes(x = Zone, y = Probability, fill = Mode)) +
   theme_bw()
 
-
-write.csv(Data_Zones %>% adorn_totals(name = 'TOTAL') %>% select(Zone, contains("Trips")), "output data/predicted_trips_by_zone_mode.csv")
+#---- Write output to file and print to console  ----
+write.csv(
+  Data_Zones %>% adorn_totals(name = 'TOTAL') %>% select(Zone, contains("Trips")),
+  "output data/predicted_trips_by_zone_mode.csv"
+)
 
 print(Data_Zones %>% adorn_totals(name = 'TOTAL') %>% select(Zone, contains("Trips")))
-
-#---- Visualisation  ----
-
