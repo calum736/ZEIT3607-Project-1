@@ -1,0 +1,41 @@
+# This script filters the CPI table to include only those index series used
+# in the Personal Inflation Calculator.
+library(tidyverse)
+library(readxl)
+
+# The input data for this script can be downloaded using the following link
+# https://www150.statcan.gc.ca/n1/tbl/csv/18100004-eng.zip
+setwd("c:/Users/61475/Documents/PI Calculator/pic_prototype")
+
+# Read the cpi file
+cpi_codr <- read_csv(".\\inputs\\18100004.csv", 
+                     col_types = cols(REF_DATE = col_date("%Y-%m"),
+                                      COORDINATE = (col_character()),
+                                      STATUS = (col_character())
+                                     )
+                     )
+
+# Keep rows with reference dates on or after January 1, 2002
+cpi_codr_201101 <- filter(cpi_codr, REF_DATE >= as.Date("2002-01-01"))
+
+# Read in the coordinate data
+coord_1 <- read_xlsx(".\\inputs\\coordinates.xlsx", 
+                     sheet = "geography"
+                     )
+
+coord_2 <- read_xlsx(".\\inputs\\coordinates.xlsx", 
+                     sheet = "commodity"
+                     )
+
+# Cross coordinate dimensions
+coordinates <- crossing(geo =coord_1$`Member ID`, com = coord_2$`Member ID`) %>% 
+               mutate(coordinate = paste(geo, com, sep = "."))
+
+# subset codr data to keep desired coordinates
+cpi_codr_subset <- filter(cpi_codr_201101, COORDINATE %in% coordinates$coordinate)
+
+# Write the final data to a csv file
+write_csv(cpi_codr_subset, 
+          ".\\inputs\\official_index_series_all.csv",
+          append = FALSE,
+          col_names = TRUE)

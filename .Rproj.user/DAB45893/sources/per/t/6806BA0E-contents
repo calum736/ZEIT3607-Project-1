@@ -1,0 +1,238 @@
+library(tidyverse)
+library(readxl)
+library(openxlsx)
+
+# Expenditures file for testing
+test_exp <- "test_case"
+setwd("c:/Users/61475/Documents/PI Calculator/pic_prototype")
+
+##############################################################
+# IMPORT CPI DATA                                            #
+############################################################## 
+# Read in official CPI numbers, this file is created by inputs.R. Keep desired variables (columns)
+# sort the data according to vector and date.
+index_series <- read_csv(".\\inputs\\official_index_series_all.csv", 
+                         col_types = cols(COORDINATE = col_character(),
+                                          STATUS = col_character())
+                         ) %>% 
+                select(reference_period = REF_DATE, 
+                       geography = GEO, 
+                       index_name = 'Products and product groups',
+                       vector = VECTOR,
+                       coordinate = COORDINATE,
+                       index_value = VALUE
+                       ) %>% 
+                arrange(vector, desc(reference_period))
+
+##############################################################
+# HANDLE MISSING DATA AND CALCULATE DEFLATION FACTORS        #
+##############################################################        
+# Some indexes are not published at the provincial level. For provinces that do not have published data, 
+# the Canada level series will be used. I transpose the data into a wide format such that columns are provinces 
+# and rows are products, this will create NAs for product-province combinations that are missing coordinates.
+coord_by_geo <- index_series %>% 
+                select(coordinate, geography, index_name) %>% 
+                distinct() %>% 
+                spread(key = geography, value = coordinate)
+
+coord_by_geo_adjusted <- coord_by_geo
+
+# replace any NA with the corresponding Canada coordinate, There may be a better way to do this, but this is good enough for now
+# look into mutate and across to replace this approach
+for (n in 1:ncol(coord_by_geo)) {
+    for (m in which(is.na(coord_by_geo[[n]]))) {
+        coord_by_geo_adjusted[[m, n]] <- coord_by_geo[[m, "Canada"]]
+        }
+    }
+
+rm(m, n)
+
+# The data set from the previous step is transposed back into a long format to prepare for merging index values
+coord_by_geo_final <- coord_by_geo_adjusted %>% 
+                      gather(Alberta:Saskatchewan, key = geography, value = coordinate)
+
+# Province and coordinate data is merged with index data. this step will ensure those province-product combinations which 
+# lack published data will use the canada level data for the specified product. Then Calculate the deflation factors.
+index_series_2 <- coord_by_geo_final %>% 
+                  inner_join(index_series, by = c("coordinate", "index_name")) %>%
+                  select(
+                         geography = geography.x,
+                         index_name, 
+                         vector,
+                         coordinate,
+                         reference_period,
+                         index_value
+                         ) %>% 
+                  arrange(geography, coordinate, desc(reference_period)) %>% 
+                  group_by(geography, coordinate) %>% 
+                  mutate(
+                         index_1m_defl = index_value/lag(index_value, 1), # could modify the next step to use this
+                         deflate_factor = cumprod(if_else(is.na(index_1m_defl), 1, index_1m_defl))
+                        ) %>% 
+                  ungroup()
+
+# Now I need to fix dimension one of the coordinate values for those province-product combinations which are now using
+# Canada data. I do this so that I can correctly filter data using the coordinates.
+coord_1 <- read_xlsx(".\\inputs\\coordinates.xlsx", sheet = "geography") %>% 
+           mutate(coord_dim_1 = as.character(`Member ID`)) %>% 
+           select(geography = `Member Name`, coord_dim_1)
+
+index_series_3 <- index_series_2 %>% 
+                  left_join(coord_1, by = "geography") %>% 
+                  separate(coordinate, c("dim1", "dim2")) %>% 
+                  mutate(dim1 = coord_dim_1, coordinate = paste(dim1, dim2, sep = ".")) %>% 
+                  select(-coord_dim_1)      
+
+##############################################################
+# DEFLATE USER EXPEDNITURES                                  #
+############################################################## 
+# dimnsion two of the coordinate for which the user submits an annual expenditure
+annual_values <- c("89",    # Homeowners' maintenance and repairs
+                   "87",    # Property taxes and other special charges
+                   "116",    # Household furnishings and equipment
+                   "233",    # Home entertainment equipment, parts and services
+                   "224",    # Digital computing equipment and devices
+                   "185",    # Passenger vehicle parts, maintenance and repairs
+                   "188",    # Other passenger vehicle operating expenses
+                   "240",    # Travel services
+                   "199",    # Air transportation
+                   "248")    # Education
+
+# dimension two of the coordinate for which the user submitted expenditures require unique operations
+special_value_1 <- c("180")    # Purchase of passenger vehicles
+
+special_value_2 <- c("86")    # Homeowners' replacement cost
+
+# Read in expenditure test case
+test_case <- read_csv(paste0(".\\inputs\\", test_exp, ".csv"), 
+                      col_types = cols(coord_dim_2 = col_character())
+                      )
+
+# Modify user expenditures, all expenditures should become monthly expenditures
+user_exp <- test_case %>% 
+    mutate(expenditure2 = if_else(
+        coord_dim_2 %in% annual_values, 
+        expenditure/12,
+        if_else(
+            coord_dim_2 %in% special_value_1,
+            expenditure/10/12,
+            if_else(
+                coord_dim_2 %in% special_value_2,
+                expenditure*0.015/12,
+                as.double(expenditure)
+                )
+              )
+            )
+            ) %>% 
+    select(
+           dim2 = coord_dim_2,
+           expenditure = expenditure2
+           )
+
+# deflate expenditures
+deflated_exp <- index_series_3 %>% 
+                filter(dim2 != "2") %>% 
+                left_join(user_exp, by = "dim2") %>% 
+                mutate(d_expenditure = deflate_factor*expenditure) %>%
+                select(
+                       dim1,
+                       dim2,
+                       reference_period,
+                       d_expenditure
+                       )
+
+total_exp <- deflated_exp %>% 
+             arrange(dim1, reference_period) %>% 
+             group_by(dim1, reference_period) %>% 
+             summarise(total = sum(d_expenditure)) %>% 
+             ungroup()
+
+personal_index <- total_exp %>% 
+                  group_by(dim1) %>% 
+                  mutate(
+                         t_minus_1 = lag(total),
+                         relative = total/lag(total),
+                         index = cumprod(if_else(is.na(relative), 100, relative)),
+                         index_round = round(index, 1),
+                         mm_chg = 100*(index_round/lag(index_round) - 1),
+                         yy_chg = 100*(index_round/lag(n = 12, index_round) - 1),
+                         r_mm_chg = round(mm_chg, 1),
+                         r_yy_chg = round(yy_chg, 1)
+                  )
+
+# Calculate the annual average of the personal index for 2002. Rebase the personal
+# index to 2002=100
+pi_base_indexes <- personal_index %>%
+    filter(between(reference_period, as.Date("2002-01-01"), as.Date("2002-12-31"))) %>%
+    group_by(dim1)%>%
+    summarise(base_index = mean(index))
+
+personal_index <- left_join(personal_index, pi_base_indexes, by = "dim1") %>%
+    arrange(dim1, reference_period) %>%
+    mutate(index_2002_100 = 100*index/base_index,
+           index_round_2002_100 = round(index_2002_100, 1),
+           r_mm_chg_2002_100 = round(100*(index_round_2002_100/lag(index_round_2002_100) - 1), 1),
+           r_yy_chg_2002_100 = round(100*(index_round_2002_100/lag(n = 12, index_round_2002_100) - 1), 1)
+           )
+
+##############################################################
+# CALCAULTE PERSONAL CPI                                     #
+############################################################## 
+
+# Rebase and calculate movements for official all-items CPI for the selected geography
+# Note that round() rounds to even on 5
+
+CPI <- index_series_3 %>% 
+       filter(dim2 == "2") %>% 
+       select(dim1, dim2, reference_period, all_items = index_value) %>% 
+       arrange(dim1, reference_period) %>% 
+       group_by(dim1) %>% 
+       mutate(
+              all_items_rebase = round(100*all_items/first(all_items), 1),
+              mm_chg = 100*(all_items/lag(all_items) - 1),
+              yy_chg = 100*(all_items/lag(n = 12, all_items) - 1),
+              r_mm_chg = round(mm_chg, 1),
+              r_yy_chg = round(yy_chg, 1)
+            ) %>% 
+       ungroup()
+
+# Combine total_exp and CPI
+personal_infl <- personal_index %>% 
+    full_join(CPI, by = c("dim1", "reference_period"), suffix = c("_p", "_o"))
+
+final_output <- personal_infl %>% 
+    left_join(
+        coord_1 %>% rename(dim1 = coord_dim_1),
+        by = "dim1"
+    ) %>% 
+    select(
+        geography,
+        dim1,
+        reference_period,
+        `personal_index (200201=100)` = index_round,
+        #personal_mm_chg = r_mm_chg_p,
+        #personal_yy_chg = r_yy_chg_p,
+        `personal_index (2002=100)` = index_round_2002_100,
+        personal_mm_chg = r_mm_chg_2002_100,
+        personal_yy_chg = r_yy_chg_2002_100,
+        `official_index (2002=100)` = all_items,
+        `official_index (200201=100)` = all_items_rebase, # changed to (200201=100)
+        official_mm_chg = r_mm_chg_o,
+        official_yy_chg = r_yy_chg_o
+    ) %>% 
+    arrange(dim1, desc(reference_period))
+
+# Saving results
+period <- final_output %>%
+          ungroup() %>% 
+          summarize(max = max(reference_period))
+
+period <- str_replace_all(as.character(period$max), "\\-", "_")
+
+by_geo <- split(final_output %>% ungroup %>% select(-dim1), final_output$geography)
+
+write.xlsx(by_geo,
+           paste(".\\outputs\\cpi_calc_", period, ".xlsx", sep = ""),
+           firstRow = TRUE,
+           colWidths = "auto"
+           )
