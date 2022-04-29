@@ -174,22 +174,22 @@ calc_zone_trips <-
     #---- Visualisation ----
     print(zone_data %>% select(Zone, Trips))
     
-    zone_data %>%
+    print(zone_data %>%
       ggplot() +
       geom_col(aes(x = reorder(Zone, -Trips), y = Trips)) +
       labs(x = "Zone") +
-      theme_bw()
+      theme_bw())
     
-    zone_data %>%
+    print(zone_data %>%
       select(Zone, Trips, Distance_City, Population) %>%
       mutate(Zone = reorder(Zone, -Trips)) %>%
       gather(-Zone, key = Measure, value = Value) %>%
       ggplot() +
       geom_col(aes(x = Zone, y = Value)) +
       facet_grid(rows = vars(Measure), scales = "free") +
-      theme_bw()
+      theme_bw())
     
-    zone_data %>%
+    print(zone_data %>%
       ggplot() +
       geom_col(aes(
         x = reorder(Zone, -Trips),
@@ -197,7 +197,7 @@ calc_zone_trips <-
         fill = Population
       )) +
       labs(x = "Zone") +
-      theme_bw()
+      theme_bw())
     
     #----------------------------------------------#
     #--- 3. Mode Choice ---------------------------#
@@ -208,7 +208,7 @@ calc_zone_trips <-
       zone_data %>%
       mutate(
         PT_Reliability = (PT_TT_max - PT_TT_min) / PT_TT_mean,
-        Auto_Cost = Auto_Cost_KM * Distance_City
+        Auto_Cost = Auto_Cost_KM * Distance_City 
       ) %>%
       #Assuming three modes are available
       #Calculating utilities for students
@@ -236,14 +236,14 @@ calc_zone_trips <-
       )
     
     #---- Visualisation  ----
-    zone_data %>%
+    print(zone_data %>%
       select(Zone, contains("Prob")) %>%
       mutate(Zone = reorder(Zone, -Prob_Auto)) %>%
       gather(-Zone, key = Mode, value = Probability) %>%
       mutate(Mode = ordered(Mode, levels = c("Prob_Active", "Prob_PT", "Prob_Auto"))) %>%
       ggplot() +
       geom_col(aes(x = Zone, y = Probability, fill = Mode)) +
-      theme_bw()
+      theme_bw())
     
     return (zone_data)
   }
