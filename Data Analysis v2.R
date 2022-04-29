@@ -1,6 +1,7 @@
 
 
 
+
 #---- PACKAGES ----
 library(tidyverse)
 library(janitor)
@@ -122,8 +123,6 @@ city_total_trips = sum(city_student_pop$TotalTrips, na.rm = TRUE) + sum(city_sta
 
 # TODO: need to factor in that the av. weekly trips is counting weekends
 
-
-
 #Details for the City Campus
 city_zone_data <- data.frame(
   Zone = c(
@@ -136,7 +135,8 @@ city_zone_data <- data.frame(
     "Tuggeranong",
     "Queanbeyan"
   ),
-  Population = c(100040, 83167, 58702, 27618, 34551, 20611, 82649, 61031),
+  #Population = c(100040, 83167, 58702, 27618, 34551, 20611, 82649, 61031), # 2020 population
+  Population = c(152452, 87507, 91597, 38530, 56363, 26268, 90178, 78756), # 2040 population projection
   Distance_City = c(13.30, 14.91, 5.70, 6.00, 11.00, 15.90, 19.40, 14.70),
   Auto_TT_mean = c(17, 31, 12, 12, 15, 23, 29, 25),
   PT_TT_min = c(31, 51, 23, 19, 36, 32, 48, 34),
@@ -159,15 +159,15 @@ calc_zone_trips <-
       mutate(
         # This tutorial uses distance as the generalised cost
         FrictionFactor = Distance_City ^ (-0.41) / 0.41,
-        # This tutorial assumes alpha to be 0.1
-        Alpha = 2.5514E-6,
+        #Alpha = 2.5514E-6, #2020 population
+        Alpha = 1.8025E-6,
         # The gravity model:
         Trips = Alpha * Population * total_trips * FrictionFactor
       )
     
     #- calibration debug
     #Total trip production:
-    zone_data$Trips %>% sum()
+    zone_data_total_trips <- zone_data$Trips %>% sum()
     #Total trip attraction
     city_total_trips
     
@@ -176,13 +176,13 @@ calc_zone_trips <-
     
     zone_data %>%
       ggplot() +
-      geom_col(aes(x = reorder(Zone,-Trips), y = Trips)) +
+      geom_col(aes(x = reorder(Zone, -Trips), y = Trips)) +
       labs(x = "Zone") +
       theme_bw()
     
     zone_data %>%
       select(Zone, Trips, Distance_City, Population) %>%
-      mutate(Zone = reorder(Zone,-Trips)) %>%
+      mutate(Zone = reorder(Zone, -Trips)) %>%
       gather(-Zone, key = Measure, value = Value) %>%
       ggplot() +
       geom_col(aes(x = Zone, y = Value)) +
@@ -192,7 +192,7 @@ calc_zone_trips <-
     zone_data %>%
       ggplot() +
       geom_col(aes(
-        x = reorder(Zone,-Trips),
+        x = reorder(Zone, -Trips),
         y = Trips,
         fill = Population
       )) +
@@ -238,7 +238,7 @@ calc_zone_trips <-
     #---- Visualisation  ----
     zone_data %>%
       select(Zone, contains("Prob")) %>%
-      mutate(Zone = reorder(Zone,-Prob_Auto)) %>%
+      mutate(Zone = reorder(Zone, -Prob_Auto)) %>%
       gather(-Zone, key = Mode, value = Probability) %>%
       mutate(Mode = ordered(Mode, levels = c("Prob_Active", "Prob_PT", "Prob_Auto"))) %>%
       ggplot() +
@@ -249,26 +249,26 @@ calc_zone_trips <-
   }
 
 Auto_Cost_KM = 0.35 * 2  # ATO $0.7/km * 2 since return trip
-
+TT_growth = 1.15 # TT for auto and pt expected to grow by 15% in 2040
+city_zone_data <- city_zone_data %>% mutate_at(vars(Auto_TT_mean, PT_TT_min, PT_TT_max, PT_TT_mean),
+                                           .funs = funs(. * TT_growth))
 
 zone_trips_student <- calc_zone_trips(city_zone_data,
                                       sum(city_student_pop$TotalTrips, na.rm = TRUE),
                                       Auto_Cost_KM,
                                       1.66)
 zone_trips_staff <- calc_zone_trips(city_zone_data,
-                                   sum(city_staff_pop$TotalTrips, na.rm = TRUE),
-                                   Auto_Cost_KM,
-                                   3.22)
-zone_trips_total <- rbind(zone_trips_student, zone_trips_staff) %>% 
-  select(Zone, contains("Trips")) %>% 
-  group_by(Zone) %>% 
-  summarise_all(sum) %>% 
+                                    sum(city_staff_pop$TotalTrips, na.rm = TRUE),
+                                    Auto_Cost_KM,
+                                    3.22)
+zone_trips_total <- rbind(zone_trips_student, zone_trips_staff) %>%
+  select(Zone, contains("Trips")) %>%
+  group_by(Zone) %>%
+  summarise_all(sum) %>%
   adorn_totals(name = 'TOTAL')
 
 #---- Write output to file and print to console  ----
-write.csv(
-  zone_trips_total,
-  "output data/predicted_trips_by_zone_mode.csv"
-)
+write.csv(zone_trips_total,
+          "output data/predicted_trips_by_zone_mode.csv")
 
 print(zone_trips_total)
