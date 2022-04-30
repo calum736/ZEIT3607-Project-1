@@ -38,7 +38,7 @@ staff_IDs <- read.csv(file = "data/Group_3_StaffIDs.csv")
 #--- 1. TRIP GENERATION -----------------------#
 #----------------------------------------------#
 
-#- Pull out a subset of data from the sample list
+#----- Pull out a subset of data from the sample list----
 student_sample <-
   filter(student_master, student_master$ID %in% student_IDs$ID)
 staff_sample <-
@@ -47,7 +47,7 @@ staff_sample <-
 n_students <- n_distinct(student_sample$ID)
 n_staff <- n_distinct(staff_sample$ID)
 
-#- Average student weekly trips by school, pg/ug and gender
+#---- Average student weekly trips ----
 av_trips_student <- student_sample %>%
   group_by(ID, School, Career) %>%
   summarise(WeeklyTrips = n()) %>%
@@ -56,7 +56,7 @@ av_trips_student <- student_sample %>%
   mutate(ID = paste(School, Career, sep = "_"),
          .before = School)
 
-#- Average staff weekly trips by School, pt/ft and role
+#---- Average staff weekly trips ----
 av_trips_staff <- staff_sample %>%
   group_by(ID, School, FulltimeParttime) %>%
   summarise(WeeklyTrips = n()) %>%
@@ -65,6 +65,23 @@ av_trips_staff <- staff_sample %>%
   mutate(ID = paste(School, FulltimeParttime, sep = "_"),
          .before = School)
 
+#- Regression method
+Data_Student_Weekly <- 
+  student_sample %>% 
+  group_by(ID) %>% 
+  summarise(WeeklyTrips=n(), School=first(School), Career=first(Career), Gender=first(Gender))
+Student_Weekly_Model <- lm(WeeklyTrips ~ School+Career+Gender, data = Data_Student_Weekly)
+print(summary(Student_Weekly_Model))
+print(Student_Weekly_Model$coefficients)
+
+Data_Staff_Weekly <- 
+  staff_sample %>% 
+  group_by(ID) %>% 
+  summarise(WeeklyTrips=n(), School=first(School), FulltimeParttime=first(FulltimeParttime), Level=first(Level))
+
+Staff_Weekly_Model <- lm(WeeklyTrips ~ School+FulltimeParttime, data = Data_Staff_Weekly)
+print(summary(Staff_Weekly_Model))
+print(Staff_Weekly_Model$coefficients)
 
 #- Define the parameters for the new city campus (as given in the brief)
 N_STUDENT <- 5000
@@ -141,14 +158,20 @@ city_zone_data <- data.frame(
   Auto_TT_mean = c(17, 31, 12, 12, 15, 23, 29, 25),
   PT_TT_min = c(31, 51, 23, 19, 36, 32, 48, 34),
   PT_TT_max = c(38, 71, 34, 33, 56, 47, 72, 49),
-  PT_TT_mean = c(33, 62, 29, 27, 49, 42, 64, 44)
+  PT_TT_mean = c(33, 62, 29, 27, 49, 42, 64, 44),
+  ODT_TT_min = c(20, 38, 16, 14, 22, 24, 35, 27),
+  ODT_TT_max = c(31, 49, 24, 26, 36, 39, 57, 41),
+  ODT_TT_mean = c(23, 43, 20, 21, 30, 31, 49, 34)
 )
 
+
+#--- Function to calculate trip dist and mode choice ----
 calc_zone_trips <-
   function(zone_data,
            total_trips,
            Auto_Cost_KM,
-           PT_Cost) {
+           PT_Cost,
+           ODT_Cost) {
     #----------------------------------------------#
     #--- 2. TRIP DISTRIBUTION ---------------------#
     #----------------------------------------------#
@@ -208,13 +231,15 @@ calc_zone_trips <-
       zone_data %>%
       mutate(
         PT_Reliability = (PT_TT_max - PT_TT_min) / PT_TT_mean,
-        Auto_Cost = Auto_Cost_KM * Distance_City 
+        ODT_Reliability = (ODT_TT_max - ODT_TT_min) / ODT_TT_mean,
+        Auto_Cost = Auto_Cost_KM * Distance_City #+ 5 #5 dollar parking for proposal 2
       ) %>%
       #Assuming three modes are available
       #Calculating utilities for students
       mutate(
         U_Auto = -0.25 * Auto_TT_mean - 0.11 * Auto_Cost,
         U_PT = -0.26 - 0.15 * PT_TT_mean - 0.13 * PT_Cost - 0.01 * PT_Reliability,
+        U_ODT = -0.26 - 0.15 * ODT_TT_mean - 0.13 * ODT_Cost - 0.01 * ODT_Reliability, #assume same utility function for odt
         U_Active = 0.1 - 0.67 * Distance_City
       )
     
@@ -223,15 +248,18 @@ calc_zone_trips <-
       mutate(
         Exp_U_Auto = exp(U_Auto),
         Exp_U_PT = exp(U_PT),
+        Exp_U_ODT = exp(U_ODT),
         Exp_U_Active = exp(U_Active),
-        Exp_Sum = Exp_U_Auto + Exp_U_PT + Exp_U_Active,
+        Exp_Sum = Exp_U_Auto + Exp_U_PT + Exp_U_ODT + Exp_U_Active,
         
         Prob_Auto = Exp_U_Auto / Exp_Sum,
         Prob_PT = Exp_U_PT / Exp_Sum,
+        Prob_ODT = Exp_U_ODT/ Exp_Sum,
         Prob_Active = Exp_U_Active / Exp_Sum,
         
         Trips_Auto = Trips * Prob_Auto,
         Trips_PT = Trips * Prob_PT,
+        Trips_ODT = Trips * Prob_ODT,
         Trips_Active = Trips * Prob_Active
       )
     
@@ -248,6 +276,8 @@ calc_zone_trips <-
     return (zone_data)
   }
 
+
+# ---- Determine trips ----
 Auto_Cost_KM = 0.35 * 2  # ATO $0.7/km * 2 since return trip
 TT_growth = 1.15 # TT for auto and pt expected to grow by 15% in 2040
 city_zone_data <- city_zone_data %>% mutate_at(vars(Auto_TT_mean, PT_TT_min, PT_TT_max, PT_TT_mean),
@@ -256,11 +286,14 @@ city_zone_data <- city_zone_data %>% mutate_at(vars(Auto_TT_mean, PT_TT_min, PT_
 zone_trips_student <- calc_zone_trips(city_zone_data,
                                       sum(city_student_pop$TotalTrips, na.rm = TRUE),
                                       Auto_Cost_KM,
-                                      1.66)
+                                      1.66 * 2,
+                                      1.66 * 2 * 1.5)
 zone_trips_staff <- calc_zone_trips(city_zone_data,
                                     sum(city_staff_pop$TotalTrips, na.rm = TRUE),
                                     Auto_Cost_KM,
-                                    3.22)
+                                    3.22 * 2,
+                                    3.22 * 2 * 1.5)
+
 zone_trips_total <- rbind(zone_trips_student, zone_trips_staff) %>%
   select(Zone, contains("Trips")) %>%
   group_by(Zone) %>%
