@@ -1,9 +1,17 @@
-"","ID","FulltimeParttime.x","School.x","Combined_Weight","n","TripRate","School.y","FulltimeParttime.y","AverageTrips","TotalTrips"
-"1","BUS Full-Time","Full-Time","BUS",0.16,112,3.98653681619066,"BUS","Full-Time",3.98275862068966,89.2984246826709
-"2","HASS Full-Time","Full-Time","HASS",0.16,112,3.2509182366879,"HASS","Full-Time",3.29545454545455,72.8205685018089
-"3","SCI Full-Time","Full-Time","SCI",0.16,112,3.37193824099594,"SCI","Full-Time",3.42,75.5314165983091
-"4","SEIT Full-Time","Full-Time","SEIT",0.32,224,4.27081347997285,"SEIT","Full-Time",4.23478260869565,191.332443902784
-"5","BUS Part-Time","Part-Time","BUS",0.04,28,3.69521616523536,"BUS","Part-Time",3.75,20.693210525318
-"6","HASS Part-Time","Part-Time","HASS",0.04,28,2.95959758573259,"HASS","Part-Time",1,16.5737464801025
-"7","SCI Part-Time","Part-Time","SCI",0.04,28,3.08061759004064,"SCI","Part-Time",2.6,17.2514585042276
-"8","SEIT Part-Time","Part-Time","SEIT",0.08,56,3.97949282901754,"SEIT","Part-Time",4.57142857142857,44.5703196849965
+"","AcademicProfessional","ID","FulltimeParttime","School","Combined_Weight","n","TripRate","TotalTrips"
+"1","Academic","BUS Full-Time Academic","Full-Time","BUS",0.104,72.8,3.93840650306554,56.5192842156703
+"2","Academic","HASS Full-Time Academic","Full-Time","HASS",0.104,72.8,3.21672676119874,46.1626025446665
+"3","Academic","SCI Full-Time Academic","Full-Time","SCI",0.104,72.8,3.31852910056641,47.6235475608964
+"4","Academic","SEIT Full-Time Academic","Full-Time","SEIT",0.208,145.6,4.22800906215255,121.350625266451
+"5","Academic","BUS Part-Time Academic","Part-Time","BUS",0.026,18.2,3.60050916197694,12.917546759616
+"6","Academic","HASS Part-Time Academic","Part-Time","HASS",0.026,18.2,2.87882942011014,10.328376341865
+"7","Academic","SCI Part-Time Academic","Part-Time","SCI",0.026,18.2,2.98063175947781,10.6936125959225
+"8","Academic","SEIT Part-Time Academic","Part-Time","SEIT",0.052,36.4,3.89011172106395,27.9131077280096
+"9","Professional","BUS Full-Time Professional","Full-Time","BUS",0.056,39.2,4.13655563895872,31.9646292235165
+"10","Professional","HASS Full-Time Professional","Full-Time","HASS",0.056,39.2,3.41487589709192,26.3879544775914
+"11","Professional","SCI Full-Time Professional","Full-Time","SCI",0.056,39.2,3.51667823645959,27.1746171786383
+"12","Professional","SEIT Full-Time Professional","Full-Time","SEIT",0.112,78.4,4.42615819804573,68.4049813582463
+"13","Professional","BUS Part-Time Professional","Part-Time","BUS",0.014,9.8,3.79865829787012,7.33839422433214
+"14","Professional","HASS Part-Time Professional","Part-Time","HASS",0.014,9.8,3.07697855600332,5.94422553785085
+"15","Professional","SCI Part-Time Professional","Part-Time","SCI",0.014,9.8,3.17878089537099,6.14089121311257
+"16","Professional","SEIT Part-Time Professional","Part-Time","SEIT",0.028,19.6,4.08826085695713,15.7957191764676

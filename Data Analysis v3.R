@@ -32,7 +32,7 @@ multiply_df_weights <- function(...) {
   }
   output_length <- length(output)
   output$Combined_Weight = Reduce('*', output[, (1 + input_length):output_length])
-  output <- output[-c((input_length+1):output_length)]
+  output <- output[-c((input_length + 1):output_length)]
   print(output)
   return(output)
 }
@@ -45,7 +45,7 @@ setwd("~/ZEIT3607/Project 1")
 
 #- Read student and staff data from master file
 student_master <- read.csv(file = "data/1_Students.csv")
-staff_master <- read.csv(file = "data/1_Staff.csv")
+staff_master <- read.csv(file = "data/1_Staff_Modified.csv")
 
 student_IDs <- read.csv(file = "data/Group_3_StudentIDs.csv")
 staff_IDs <- read.csv(file = "data/Group_3_StaffIDs.csv")
@@ -63,25 +63,24 @@ staff_sample <-
 n_students <- n_distinct(student_sample$ID)
 n_staff <- n_distinct(staff_sample$ID)
 
-#---- Average student weekly trips ----
-av_trips_student <- student_sample %>%
-  group_by(ID, School, Career) %>%
-  summarise(WeeklyTrips = n()) %>%
-  group_by(School, Career) %>%
-  summarise("AverageTrips" = mean(WeeklyTrips)) %>%
-  mutate(ID = paste(School, Career, sep = " "),
-         .before = School)
+# #---- Average student weekly trips ----
+# av_trips_student <- student_sample %>%
+#   group_by(ID, School, Career) %>%
+#   summarise(WeeklyTrips = n()) %>%
+#   group_by(School, Career) %>%
+#   summarise("AverageTrips" = mean(WeeklyTrips)) %>%
+#   mutate(ID = paste(School, Career, sep = " "),
+#          .before = School)
+# 
+# #---- Average staff weekly trips ----
+# av_trips_staff <- staff_sample %>%
+#   group_by(ID, School, FulltimeParttime) %>%
+#   summarise(WeeklyTrips = n()) %>%
+#   group_by(School, FulltimeParttime, Academic) %>%
+#   summarise("AverageTrips" = mean(WeeklyTrips)) %>%
+#   mutate(ID = paste(School, FulltimeParttime, sep = " "),
+#          .before = School)
 
-#---- Average staff weekly trips ----
-av_trips_staff <- staff_sample %>%
-  group_by(ID, School, FulltimeParttime) %>%
-  summarise(WeeklyTrips = n()) %>%
-  group_by(School, FulltimeParttime) %>%
-  summarise("AverageTrips" = mean(WeeklyTrips)) %>%
-  mutate(ID = paste(School, FulltimeParttime, sep = " "),
-         .before = School)
-
-#- Regression model
 student_weekly_trips <-
   student_sample %>%
   group_by(ID) %>%
@@ -92,7 +91,7 @@ student_weekly_trips <-
     Gender = first(Gender)
   )
 student_weekly_model <-
-  lm(WeeklyTrips ~ School + Career, data = student_weekly_trips)
+  lm(WeeklyTrips ~ School + Career + Gender, data = student_weekly_trips)
 print(summary(student_weekly_model))
 
 staff_weekly_trips <-
@@ -102,13 +101,12 @@ staff_weekly_trips <-
     WeeklyTrips = n(),
     School = first(School),
     FulltimeParttime = first(FulltimeParttime),
-    Level = first(Level)
+    AcademicProfessional = first(AcademicProfessional)
+    # Level = first(Level) # was unable to make data match the proportions given inthe brief 
   )
 staff_weekly_model <-
-  lm(WeeklyTrips ~ School + FulltimeParttime, data = staff_weekly_trips)
+  lm(WeeklyTrips ~ School + FulltimeParttime + AcademicProfessional, data = staff_weekly_trips)
 print(summary(staff_weekly_model))
-
-
 
 #- Define the parameters for the new city campus (as given in the brief)
 N_STUDENT <- 5000
@@ -118,18 +116,33 @@ CAREER <- data.frame(Career = c("PGRD", "UGRD"),
 GENDER <- data.frame(Gender = c("M", "F"),
                      Weight = c(0.5, 0.5))
 POSITION_TITLE <- data.frame(
+  #https://www.hr.unsw.edu.au/services/indrel/The%20University%20of%20New%20South%20Wales%20(Academic%20Staff)%20Enterprise%20Agreement%202018.pdf
+  #https://www.hr.unsw.edu.au/services/indrel/The%20University%20of%20New%20South%20Wales%20(Professional%20Staff)%20Enterprise%20Agreement%202018.pdf
   PositionTitle = c(
     "admin",
+    # Professional
     "executive",
+    # Professional
     "director",
+    # Professional
     "professor",
+    # Academic
     "associate_professor",
+    # Academic
     "senior_lecturer",
+    # Academic
     "lecturer",
+    # Academic
     "research_fellow",
-    "technical_support"
+    # Academic
+    "technical_support" # Professional
   ),
   Weight = c(0.10, 0.10, 0.05, 0.05, 0.05, 0.15, 0.15, 0.25, 0.10)
+)
+# In the provided sample data, letters correspond to academic, and numbers to professional
+POSITION_TYPE <- data.frame (
+  AcademicProfessional = c("Academic", "Professional"),
+  Weight = c(0.65, 0.35)
 )
 CONTRACT_HRS <-
   data.frame(
@@ -142,29 +155,38 @@ SCHOOL <- data.frame(
 )
 #- Calculate city student populations
 city_student_pop <-
-  multiply_df_weights(SCHOOL, CAREER) %>% 
+  multiply_df_weights(SCHOOL, CAREER, GENDER) %>%
   mutate(n = Combined_Weight * N_STUDENT)  %>%
-  mutate(ID = paste(School, Career, sep = " "),
+  mutate(ID = paste(School, Career, Gender, sep = " "),
          .before = Career)
 
 #- Calculate city staff populations
 city_staff_pop <-
-  multiply_df_weights(SCHOOL, CONTRACT_HRS) %>% 
+  multiply_df_weights(SCHOOL, CONTRACT_HRS, POSITION_TYPE) %>%
   mutate(n = Combined_Weight * N_STAFF)  %>%
-  mutate(ID = paste(School, FulltimeParttime, sep = " "),
+  mutate(ID = paste(School, FulltimeParttime, AcademicProfessional, sep = " "),
          .before = FulltimeParttime)
-  
 
-city_student_pop$TripRate <- predict(student_weekly_model, city_student_pop)
-city_staff_pop$TripRate <- predict(staff_weekly_model, city_staff_pop)
+city_student_pop$TripRate <-
+  predict(student_weekly_model, city_student_pop)
+city_staff_pop$TripRate <-
+  predict(staff_weekly_model, city_staff_pop)
+
+attendance_by_day <- student_sample %>%
+  full_join(staff_sample) %>%
+  group_by(Day) %>%  #,School) %>%
+  summarise(Attendance = n()) %>%
+  mutate(AttendanceRatio = Attendance / (nrow(student_sample) + nrow(staff_sample)))
+
+peek_day_ratio = max(attendance_by_day$AttendanceRatio)
 
 #- Calculate average trips per week day (cross-classification method)
 city_student_pop <- city_student_pop %>%
-  full_join(av_trips_student, by = "ID") %>%
-  mutate(TotalTrips = n * TripRate / 5)
+  #full_join(av_trips_student, by = "ID") %>%
+  mutate(TotalTrips = n * TripRate * peek_day_ratio)
 city_staff_pop <- city_staff_pop %>%
-  full_join(av_trips_staff, by = "ID") %>%
-  mutate(TotalTrips = n * TripRate / 5)
+  #full_join(av_trips_staff, by = "ID") %>%
+  mutate(TotalTrips = n * TripRate * peek_day_ratio)
 
 write.csv(city_student_pop, "output data/city_student_pop.csv")
 write.csv(city_staff_pop, "output data/city_staff_pop.csv")
@@ -215,10 +237,10 @@ calc_zone_trips <-
     zone_data <-
       zone_data %>%
       mutate(
-        # This tutorial uses distance as the generalised cost
+        # Distance as the generalised cost
         FrictionFactor = Distance_City ^ (-0.41) / 0.41,
         #Alpha = 2.5514E-6, #2020 population
-        Alpha = 2.0564E-6,
+        Alpha = 1.802E-6,
         # The gravity model:
         Trips = Alpha * Population * total_trips * FrictionFactor
       )
@@ -228,7 +250,7 @@ calc_zone_trips <-
     zone_data_total_trips <- zone_data$Trips %>% sum()
     print(zone_data_total_trips)
     #Total trip attraction
-    print(city_total_trips)
+    print(total_trips)
     
     #---- Visualisation ----
     print(zone_data %>% select(Zone, Trips))
@@ -236,7 +258,7 @@ calc_zone_trips <-
     print(zone_data %>%
             ggplot() +
             geom_col(aes(
-              x = reorder(Zone, -Trips), y = Trips
+              x = reorder(Zone,-Trips), y = Trips
             )) +
             labs(x = "Zone") +
             theme_bw())
@@ -244,7 +266,7 @@ calc_zone_trips <-
     print(
       zone_data %>%
         select(Zone, Trips, Distance_City, Population) %>%
-        mutate(Zone = reorder(Zone, -Trips)) %>%
+        mutate(Zone = reorder(Zone,-Trips)) %>%
         gather(-Zone, key = Measure, value = Value) %>%
         ggplot() +
         geom_col(aes(x = Zone, y = Value)) +
@@ -255,7 +277,7 @@ calc_zone_trips <-
     print(zone_data %>%
             ggplot() +
             geom_col(aes(
-              x = reorder(Zone, -Trips),
+              x = reorder(Zone,-Trips),
               y = Trips,
               fill = Population
             )) +
@@ -272,7 +294,7 @@ calc_zone_trips <-
       mutate(
         PT_Reliability = (PT_TT_max - PT_TT_min) / PT_TT_mean,
         ODT_Reliability = (ODT_TT_max - ODT_TT_min) / ODT_TT_mean,
-        Auto_Cost = Auto_Cost_KM * Distance_City #+ 5 #5 dollar parking for proposal 2
+        Auto_Cost = Auto_Cost_KM * Distance_City + 5 #5 dollar parking for proposal 2
       ) %>%
       #Assuming three modes are available
       #Calculating utilities for students
@@ -308,7 +330,7 @@ calc_zone_trips <-
     print(
       zone_data %>%
         select(Zone, contains("Prob")) %>%
-        mutate(Zone = reorder(Zone, -Prob_Auto)) %>%
+        mutate(Zone = reorder(Zone,-Prob_Auto)) %>%
         gather(-Zone, key = Mode, value = Probability) %>%
         mutate(Mode = ordered(
           Mode, levels = c("Prob_Active", "Prob_PT", "Prob_Auto")
@@ -332,22 +354,18 @@ city_zone_data <-
                                .funs = funs(. * TT_growth))
 
 city_trips_student <- sum(city_student_pop$TotalTrips, na.rm = TRUE)
-zone_trips_student <- calc_zone_trips(
-  city_zone_data,
-  city_trips_student,
-  Auto_Cost_KM,
-  1.66 * 2,
-  1.66 * 2 * 1.5
-)
+zone_trips_student <- calc_zone_trips(city_zone_data,
+                                      city_trips_student,
+                                      Auto_Cost_KM,
+                                      1.66 * 2,
+                                      1.66 * 2 * 1.5)
 
 city_trips_staff <- sum(city_staff_pop$TotalTrips, na.rm = TRUE)
-zone_trips_staff <- calc_zone_trips(
-  city_zone_data,
-  city_trips_staff,
-  Auto_Cost_KM,
-  3.22 * 2,
-  3.22 * 2 * 1.5
-)
+zone_trips_staff <- calc_zone_trips(city_zone_data,
+                                    city_trips_staff,
+                                    Auto_Cost_KM,
+                                    3.22 * 2,
+                                    3.22 * 2 * 1.5)
 
 zone_trips_total <- rbind(zone_trips_student, zone_trips_staff) %>%
   select(Zone, contains("Trips")) %>%
