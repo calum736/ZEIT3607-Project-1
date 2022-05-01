@@ -81,6 +81,7 @@ n_staff <- n_distinct(staff_sample$ID)
 #   mutate(ID = paste(School, FulltimeParttime, sep = " "),
 #          .before = School)
 
+#- STUDENT LINEAR MODEL ----
 student_weekly_trips <-
   student_sample %>%
   group_by(ID) %>%
@@ -90,10 +91,40 @@ student_weekly_trips <-
     Career = first(Career),
     Gender = first(Gender)
   )
-student_weekly_model <-
-  lm(WeeklyTrips ~ School + Career + Gender, data = student_weekly_trips)
-print(summary(student_weekly_model))
 
+#- Outsample validation ----
+student_train <- 
+  student_weekly_trips %>% 
+  sample_frac(0.8)
+student_test <- 
+  student_weekly_trips %>% 
+  filter(!(ID %in% student_train$ID))
+
+student_weekly_model <-
+  lm(WeeklyTrips ~ School + Career + Gender, data = student_train)
+
+student_prediction <- predict(student_weekly_model, newdata = student_test)
+
+student_test <- 
+  student_test %>% 
+  cbind(student_prediction)
+
+student_test %>% 
+  ggplot()+
+  geom_point(aes(x=student_prediction, y=WeeklyTrips), position = "jitter")
+
+student_test %>% 
+  mutate(Difference = (student_prediction - WeeklyTrips)^2) %>% 
+  group_by() %>% 
+  summarise(RMSE = (sum(Difference)/nrow(student_test))^0.5)
+
+student_weekly_trips %>% 
+  group_by(School) %>% 
+  summarise(AverageTrips = mean(WeeklyTrips)) %>% 
+  ggplot()+
+  geom_col(aes(x=School, y=AverageTrips))
+
+#- STAFF LINEAR MODEL ----
 staff_weekly_trips <-
   staff_sample %>%
   group_by(ID) %>%
@@ -104,6 +135,42 @@ staff_weekly_trips <-
     AcademicProfessional = first(AcademicProfessional)
     # Level = first(Level) # was unable to make data match the proportions given inthe brief 
   )
+
+staff_train <- 
+  staff_weekly_trips %>% 
+  sample_frac(0.8)
+staff_test <- 
+  staff_weekly_trips %>% 
+  filter(!(ID %in% staff_train$ID))
+staff_prediction <- predict(staff_weekly_model, newdata = staff_test)
+
+staff_test <- 
+  staff_test %>% 
+  cbind(staff_prediction)
+
+staff_weekly_model <-
+  lm(WeeklyTrips ~ School + FulltimeParttime + AcademicProfessional, data = staff_train)
+
+staff_test %>% 
+  ggplot()+ geom_point(aes(x=staff_prediction, y=WeeklyTrips), position = "jitter")
+
+staff_test %>% 
+  mutate(Difference = (staff_prediction - WeeklyTrips)^2) %>% 
+  group_by() %>% 
+  summarise(RMSE = (sum(Difference)/nrow(staff_test))^0.5)
+
+staff_weekly_trips %>% 
+  group_by(School) %>% 
+  summarise(AverageTrips = mean(WeeklyTrips)) %>% 
+  ggplot()+
+  geom_col(aes(x=School, y=AverageTrips))
+
+
+#- RETRAIN BOTH MODELS ON FULL DATA SET ----
+student_weekly_model <-
+  lm(WeeklyTrips ~ School + Career + Gender, data = student_weekly_trips)
+print(summary(student_weekly_model))
+
 staff_weekly_model <-
   lm(WeeklyTrips ~ School + FulltimeParttime + AcademicProfessional, data = staff_weekly_trips)
 print(summary(staff_weekly_model))
@@ -172,21 +239,42 @@ city_student_pop$TripRate <-
 city_staff_pop$TripRate <-
   predict(staff_weekly_model, city_staff_pop)
 
+#Group the data by day to find the peak day ratio
 attendance_by_day <- student_sample %>%
   full_join(staff_sample) %>%
   group_by(Day) %>%  #,School) %>%
   summarise(Attendance = n()) %>%
   mutate(AttendanceRatio = Attendance / (nrow(student_sample) + nrow(staff_sample)))
+write.csv(attendance_by_day, "output data/attendance_by_day.csv")
 
-peek_day_ratio = max(attendance_by_day$AttendanceRatio)
+peak_day_ratio = max(attendance_by_day$AttendanceRatio)
+
+#Group the data by hour to find the peak hour ratio
+entrance_counts <- student_sample %>%
+  full_join(staff_sample) %>%
+  group_by(Day, Entrance) %>%  #,School) %>%
+  summarise(Entrys = n()) %>%
+  mutate(EntryRatio = Entrys / (nrow(student_sample) + nrow(staff_sample)))
+write.csv(entrance_counts, "output data/entrance_counts.csv")
+
+peak_entrance_ratio = max(entrance_counts$EntryRatio)
+
+exit_counts <- student_sample %>%
+  full_join(staff_sample) %>%
+  group_by(Day, Exit) %>%  #,School) %>%
+  summarise(Exits = n()) %>%
+  mutate(ExitRatio = Exits / (nrow(student_sample) + nrow(staff_sample)))
+write.csv(exit_counts, "output data/exit_counts.csv")
+
+peak_exit_ratio = max(exit_counts$ExitRatio)
 
 #- Calculate average trips per week day (cross-classification method)
 city_student_pop <- city_student_pop %>%
   #full_join(av_trips_student, by = "ID") %>%
-  mutate(TotalTrips = n * TripRate * peek_day_ratio)
+  mutate(TotalTrips = n * TripRate * peak_day_ratio)#peak_entrance_ratio)
 city_staff_pop <- city_staff_pop %>%
   #full_join(av_trips_staff, by = "ID") %>%
-  mutate(TotalTrips = n * TripRate * peek_day_ratio)
+  mutate(TotalTrips = n * TripRate * peak_day_ratio)#peak_entrance_ratio)
 
 write.csv(city_student_pop, "output data/city_student_pop.csv")
 write.csv(city_staff_pop, "output data/city_staff_pop.csv")
@@ -220,6 +308,8 @@ city_zone_data <- data.frame(
   ODT_TT_max = c(31, 49, 24, 26, 36, 39, 57, 41),
   ODT_TT_mean = c(23, 43, 20, 21, 30, 31, 49, 34)
 )
+
+write.csv(city_zone_data, 'output data/city_zone_data.csv')
 
 
 #--- Function to calculate trip dist and mode choice ----
@@ -294,7 +384,7 @@ calc_zone_trips <-
       mutate(
         PT_Reliability = (PT_TT_max - PT_TT_min) / PT_TT_mean,
         ODT_Reliability = (ODT_TT_max - ODT_TT_min) / ODT_TT_mean,
-        Auto_Cost = Auto_Cost_KM * Distance_City + 5 #5 dollar parking for proposal 2
+        Auto_Cost = Auto_Cost_KM * Distance_City + 0 #5 dollar parking for proposal 2
       ) %>%
       #Assuming three modes are available
       #Calculating utilities for students
@@ -368,13 +458,37 @@ zone_trips_staff <- calc_zone_trips(city_zone_data,
                                     3.22 * 2 * 1.5)
 
 zone_trips_total <- rbind(zone_trips_student, zone_trips_staff) %>%
-  select(Zone, contains("Trips")) %>%
+  #select(Zone, contains("Trips")) %>%
   group_by(Zone) %>%
-  summarise_all(sum) %>%
+  #summarise_all(sum) %>%
   adorn_totals(name = 'TOTAL')
+write.csv(zone_trips_total,
+          "output data/zone_trips_total.csv")
+
+write.csv(zone_trips_staff,
+          "output data/zone_trips_staff.csv")
+write.csv(zone_trips_student,
+          "output data/zone_trips_student.csv")
 
 #---- Write output to file and print to console  ----
-write.csv(zone_trips_total,
-          "output data/predicted_trips_by_zone_mode.csv")
+
 
 print(zone_trips_total)
+
+light_vehicle_emissions = 149.5
+heavy_vehicle_emissions = 700
+bus_capacity = 58
+bus_occupancy = 0.5
+
+carbon_emissions <- rbind(zone_trips_student, zone_trips_staff) %>% 
+  mutate(Auto_Footprint = 2 * Trips_Auto * Distance_City * light_vehicle_emissions / 1000) %>% 
+  mutate(PT_ODT_Footprint = 2 * ((Trips_PT + Trips_ODT) * Distance_City * heavy_vehicle_emissions / 1000)/(bus_capacity * bus_occupancy)) %>% 
+  select(Zone, contains("Footprint")) %>% 
+  adorn_totals(name = 'TOTAL')
+
+write.csv(carbon_emissions,
+          "output data/carbon_footprint_1.csv")
+
+  
+  
+  
